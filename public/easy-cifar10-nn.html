@@ -1,0 +1,1036 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CIFAR-10 Nearest Neighbor 코드 한 줄씩 쉽게 이해하기</title>
+<style>
+  :root{
+    --bg:#f5f7fb; --card:#ffffff; --ink:#1b2030; --soft:#5b6472;
+    --line:#e6e9f0; --brand:#3b6ef5; --brand2:#7c5cfc;
+    --green:#1fab6d; --amber:#f0a020; --red:#e2483d; --pink:#ec4899;
+    --chipbg:#eef2ff; --codebg:#0f172a; --codeink:#e2e8f0;
+    --kw:#ff79c6; --str:#f1fa8c; --num:#bd93f9; --com:#7886a0; --fn:#8be9fd; --var:#f8f8f2;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0; background:var(--bg); color:var(--ink);
+    font-family:"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR",system-ui,sans-serif;
+    line-height:1.78; -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:920px; margin:0 auto; padding:0 18px 90px;}
+  header.hero{
+    background:
+      radial-gradient(1200px 400px at 10% -10%, rgba(255,255,255,.18), transparent 60%),
+      radial-gradient(900px 380px at 110% 0%, rgba(255,255,255,.14), transparent 60%),
+      linear-gradient(135deg,#3b6ef5,#7c5cfc 55%,#ec4899);
+    color:#fff; padding:62px 22px 56px; text-align:center; position:relative; overflow:hidden;
+  }
+  header.hero h1{margin:0 0 12px; font-size:32px; letter-spacing:-.5px;}
+  header.hero p{margin:0 auto; max-width:620px; opacity:.96; font-size:15.5px;}
+  .hero-badge{display:inline-block; background:rgba(255,255,255,.22); padding:6px 16px; border-radius:999px; font-size:13px; margin-bottom:18px; backdrop-filter:blur(6px);}
+  .hero-pills{display:flex; gap:8px; justify-content:center; flex-wrap:wrap; margin-top:18px;}
+  .hero-pills span{background:rgba(255,255,255,.18); padding:5px 12px; border-radius:999px; font-size:12.5px;}
+
+  nav.toc{
+    background:var(--card); border:1px solid var(--line); border-radius:16px;
+    padding:20px 22px; margin:-30px auto 30px; max-width:860px; position:relative;
+    box-shadow:0 12px 32px rgba(40,50,90,.10);
+  }
+  nav.toc h2{margin:0 0 10px; font-size:13.5px; color:var(--soft); font-weight:800; letter-spacing:.5px;}
+  nav.toc ol{margin:0; padding-left:22px; columns:2; column-gap:28px;}
+  nav.toc li{margin:5px 0; break-inside:avoid;}
+  nav.toc a{color:var(--brand); text-decoration:none; font-size:14.5px;}
+  nav.toc a:hover{text-decoration:underline;}
+
+  section.card{
+    background:var(--card); border:1px solid var(--line); border-radius:18px;
+    padding:28px 28px 30px; margin:24px 0; box-shadow:0 6px 18px rgba(40,50,90,.05);
+  }
+  .kicker{display:inline-block; font-size:12.5px; font-weight:800; color:#fff;
+    background:var(--brand); padding:4px 13px; border-radius:999px; margin-bottom:12px; letter-spacing:.3px;}
+  .kicker.purple{background:var(--brand2)} .kicker.green{background:var(--green)}
+  .kicker.amber{background:var(--amber)} .kicker.pink{background:var(--pink)}
+  .kicker.red{background:var(--red)}
+  h2.title{margin:4px 0 8px; font-size:24px; letter-spacing:-.4px;}
+  h3{margin:24px 0 8px; font-size:17.5px;}
+  h4{margin:14px 0 6px; font-size:15.5px;}
+  p{margin:10px 0;}
+
+  /* Code block */
+  pre.code{
+    background:var(--codebg); color:var(--codeink); border-radius:14px;
+    padding:18px 20px; margin:14px 0; font-size:14px; line-height:1.65;
+    overflow-x:auto; font-family:"JetBrains Mono","Fira Code",Menlo,Consolas,monospace;
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.05);
+  }
+  pre.code .kw{color:var(--kw); font-weight:600;}
+  pre.code .str{color:var(--str);}
+  pre.code .num{color:var(--num);}
+  pre.code .com{color:var(--com); font-style:italic;}
+  pre.code .fn{color:var(--fn);}
+  pre.code .op{color:#ff7b72;}
+  pre.code .builtin{color:#a5f3fc;}
+  pre.code .self{color:#ffb86c; font-style:italic;}
+  code.inl{
+    background:#eef2ff; color:#3730a3; padding:1px 7px; border-radius:6px;
+    font-family:"JetBrains Mono",Menlo,Consolas,monospace; font-size:.92em; font-weight:600;
+  }
+
+  .analogy{
+    border-left:5px solid var(--amber); background:#fff8ec; border-radius:0 12px 12px 0;
+    padding:14px 18px; margin:16px 0;
+  }
+  .analogy b{color:#b9770a;}
+  .analogy .lbl{font-size:12.5px; font-weight:800; color:var(--amber); letter-spacing:.5px;}
+
+  .keybox{
+    background:var(--chipbg); border:1px dashed #c7d2fe; border-radius:12px;
+    padding:14px 18px; margin:16px 0;
+  }
+  .keybox .lbl{font-size:12.5px; font-weight:800; color:var(--brand); letter-spacing:.5px;}
+
+  .warn{
+    border-left:5px solid var(--red); background:#fff1f0; border-radius:0 12px 12px 0;
+    padding:14px 18px; margin:16px 0;
+  }
+  .warn .lbl{font-size:12.5px; font-weight:800; color:var(--red); letter-spacing:.5px;}
+
+  .ok{
+    border-left:5px solid var(--green); background:#eafaf1; border-radius:0 12px 12px 0;
+    padding:14px 18px; margin:16px 0;
+  }
+  .ok .lbl{font-size:12.5px; font-weight:800; color:var(--green); letter-spacing:.5px;}
+
+  table{width:100%; border-collapse:collapse; margin:16px 0; font-size:14.5px;}
+  th,td{border:1px solid var(--line); padding:9px 11px; text-align:center;}
+  th{background:#f3f5fb; font-weight:700;}
+  td.l,th.l{text-align:left;}
+  tr:nth-child(even) td{background:#fafbfe;}
+  .hl{background:#fff3c4 !important; font-weight:700;}
+
+  .two{display:grid; grid-template-columns:1fr 1fr; gap:16px; margin:16px 0;}
+  .three{display:grid; grid-template-columns:1fr 1fr 1fr; gap:14px; margin:16px 0;}
+  @media(max-width:680px){.two,.three{grid-template-columns:1fr;} nav.toc ol{columns:1;}}
+  .mini{border:1px solid var(--line); border-radius:12px; padding:14px 16px; background:#fff;}
+  .mini h4{margin:0 0 6px; font-size:15px;}
+  .mini.blue{border-top:4px solid var(--brand);}
+  .mini.purple{border-top:4px solid var(--brand2);}
+  .mini.green{border-top:4px solid var(--green);}
+  .mini.amber{border-top:4px solid var(--amber);}
+  .mini.pink{border-top:4px solid var(--pink);}
+
+  .step{display:flex; gap:12px; margin:12px 0;}
+  .step .n{flex:0 0 28px; height:28px; border-radius:50%; background:var(--brand); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:13px; font-weight:800; margin-top:3px;}
+  .step .tx{flex:1;}
+
+  .lineby{margin:10px 0 18px;}
+  .lineby .row{
+    display:grid; grid-template-columns:minmax(260px,1.1fr) 1fr; gap:14px;
+    border:1px solid var(--line); border-radius:12px; background:#fff; margin:10px 0; overflow:hidden;
+  }
+  .lineby .lcode{
+    background:var(--codebg); color:var(--codeink); padding:12px 14px;
+    font-family:"JetBrains Mono",Menlo,Consolas,monospace; font-size:13.2px; line-height:1.6;
+    white-space:pre; overflow-x:auto;
+  }
+  .lineby .lcode .kw{color:var(--kw)} .lineby .lcode .str{color:var(--str)}
+  .lineby .lcode .num{color:var(--num)} .lineby .lcode .com{color:var(--com); font-style:italic}
+  .lineby .lcode .fn{color:var(--fn)} .lineby .lcode .self{color:#ffb86c; font-style:italic}
+  .lineby .lcode .builtin{color:#a5f3fc}
+  .lineby .ldesc{padding:12px 16px; font-size:14.3px;}
+  .lineby .ldesc b{color:var(--brand);}
+  @media(max-width:680px){.lineby .row{grid-template-columns:1fr;}}
+
+  details.ex{border:1px solid var(--line); border-radius:12px; margin:14px 0; overflow:hidden; background:#fff;}
+  details.ex>summary{
+    cursor:pointer; padding:14px 18px; font-weight:700; list-style:none;
+    background:#f3f5fb; display:flex; align-items:center; gap:10px; font-size:15.5px;
+  }
+  details.ex>summary::-webkit-details-marker{display:none;}
+  details.ex>summary .arr{transition:.2s; color:var(--brand);}
+  details.ex[open]>summary .arr{transform:rotate(90deg);}
+  details.ex .body{padding:6px 18px 18px;}
+
+  .tip{font-size:13.5px; color:var(--soft);}
+  .pill{display:inline-block; background:#eef2ff; color:var(--brand); border-radius:8px; padding:1px 9px; font-size:13px; font-weight:600;}
+  .pill.green{background:#dcfce7; color:#137a4d;}
+  .pill.amber{background:#fff3c4; color:#92400e;}
+  .pill.red{background:#fee2e2; color:#991b1b;}
+  .footer{text-align:center; color:var(--soft); font-size:13px; margin-top:40px;}
+  svg{max-width:100%; height:auto; display:block; margin:14px auto;}
+
+  /* Tensor shape diagrams */
+  .shape-diagram{
+    background:#f8fafc; border:1px solid var(--line); border-radius:12px;
+    padding:18px; margin:16px 0; text-align:center; font-family:monospace;
+  }
+  .shape-diagram .arrow{color:var(--brand); font-weight:800; font-size:20px; margin:6px 0;}
+
+  .channel-row{display:flex; gap:10px; justify-content:center; align-items:center; flex-wrap:wrap; margin:14px 0;}
+  .channel-box{
+    width:90px; height:90px; border-radius:10px; display:flex; align-items:center; justify-content:center;
+    color:#fff; font-weight:800; font-size:14px; flex-direction:column;
+  }
+  .channel-box.r{background:#ef4444;}
+  .channel-box.g{background:#22c55e;}
+  .channel-box.b{background:#3b82f6;}
+  .channel-box small{font-weight:500; font-size:11px; opacity:.9; margin-top:3px;}
+
+  .glossary{display:grid; grid-template-columns:140px 1fr; gap:10px 16px; font-size:14.5px;}
+  .glossary dt{font-weight:800; color:var(--brand);}
+  @media(max-width:680px){.glossary{grid-template-columns:1fr;}}
+
+  /* Number badge for sections */
+  .num-badge{
+    display:inline-flex; align-items:center; justify-content:center;
+    width:34px; height:34px; border-radius:10px; background:linear-gradient(135deg,#3b6ef5,#7c5cfc);
+    color:#fff; font-weight:800; margin-right:10px; vertical-align:middle; font-size:15px;
+  }
+</style>
+</head>
+<body>
+
+<header class="hero">
+  <div class="hero-badge">Week 2 실습 · 파이썬 처음이어도 OK 🐍</div>
+  <h1>CIFAR-10 Nearest Neighbor<br>코드 한 줄씩 풀어보기</h1>
+  <p>"가장 비슷한 이미지를 찾아 그 라벨을 따라가는" 가장 단순한 이미지 분류기를<br>
+  <b>코드 한 줄 한 줄</b>이 무엇을 하는지 모두 풀어 설명합니다.</p>
+  <div class="hero-pills">
+    <span>🖼️ CIFAR-10</span>
+    <span>📏 1-Nearest Neighbor</span>
+    <span>🔢 NumPy 기초</span>
+    <span>🐍 파이썬 입문 OK</span>
+  </div>
+</header>
+
+<div class="wrap">
+
+<nav class="toc">
+  <h2>이 페이지에서 다룰 내용</h2>
+  <ol>
+    <li><a href="#s0">먼저, 이 코드가 뭘 하는지 한눈에</a></li>
+    <li><a href="#s1">파이썬 기초 — 변수·함수·클래스</a></li>
+    <li><a href="#s2">⓪ 라이브러리 불러오기</a></li>
+    <li><a href="#s3">① 데이터 로드 (CIFAR-10 가져오기)</a></li>
+    <li><a href="#s4">② 1D 배열을 이미지로 되돌리기</a></li>
+    <li><a href="#s5">③ 10개 클래스 한 장씩 보기</a></li>
+    <li><a href="#s6">④ train / predict 인터페이스</a></li>
+    <li><a href="#s7">⑤ Model 클래스 — 핵심!</a></li>
+    <li><a href="#s8">⑥ 동작 확인 (sanity check)</a></li>
+    <li><a href="#s9">⑦ 테스트 정확도 측정</a></li>
+    <li><a href="#s10">⑧ 틀린 케이스 시각화</a></li>
+    <li><a href="#s11">⑨ 생각해보기 + 도전 과제</a></li>
+    <li><a href="#s12">한 장 요약</a></li>
+  </ol>
+</nav>
+
+<!-- 0 -->
+<section class="card" id="s0">
+  <span class="kicker">시작</span>
+  <h2 class="title"><span class="num-badge">0</span>먼저, 이 코드가 뭘 하는지 한눈에</h2>
+
+  <p>우리가 만들 분류기는 정말 단순합니다. 새 이미지가 들어오면, <b>학습 데이터 안에서 픽셀이 가장 비슷한 한 장을 찾아 그 라벨을 그대로 답</b>으로 내놓는 거예요.</p>
+
+  <div class="analogy">
+    <div class="lbl">📚 비유 — 책 표지로 분류하기</div>
+    낯선 책이 책상에 놓였어요. 분류기는 <b>도서관에 있는 모든 책을 꺼내</b> 표지 색·모양을 일일이 비교합니다.
+    가장 닮은 책을 한 권 찾아 "이건 그 책이랑 같은 장르일 거야"라고 답해요. 똑똑하진 않지만, <b>아주 단순해서 머신러닝의 시작</b>으로 딱입니다.
+  </div>
+
+  <h3>전체 흐름</h3>
+  <div class="three">
+    <div class="mini blue">
+      <h4>1. 준비</h4>
+      CIFAR-10 이미지 50,000장(학습) + 10,000장(테스트)을 불러와 컴퓨터가 다루기 좋은 숫자 배열로 바꿈
+    </div>
+    <div class="mini purple">
+      <h4>2. 학습</h4>
+      "그냥 저장"이 전부. 1-NN은 학습할 게 없어요 — 기억만 합니다
+    </div>
+    <div class="mini green">
+      <h4>3. 예측</h4>
+      테스트 이미지 1장을 받아 학습 이미지 5,000장과 픽셀 거리를 계산해 가장 가까운 1장의 라벨을 답
+    </div>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">CIFAR-10이란?</div>
+    32×32 크기 작은 컬러 사진 6만 장. 10개 클래스가 정해져 있어요:
+    <b>airplane, automobile, bird, cat, deer, dog, frog, horse, ship, truck</b>.
+    학습용 50,000장 + 테스트용 10,000장으로 나뉘어 있습니다.
+  </div>
+</section>
+
+<!-- 1 파이썬 기초 -->
+<section class="card" id="s1">
+  <span class="kicker purple">기초</span>
+  <h2 class="title"><span class="num-badge">1</span>파이썬을 처음 본 사람을 위한 5분 강의</h2>
+  <p>아래 다섯 가지만 알면 이 코드의 90%를 읽을 수 있어요.</p>
+
+  <h3>① 변수 — 이름표 붙이기</h3>
+  <p>"이 값을 이 이름으로 부르겠다"를 약속하는 문장입니다. <code class="inl">=</code>는 "같다"가 아니라 <b>"오른쪽 값을 왼쪽 이름에 담는다"</b>는 뜻이에요.</p>
+  <pre class="code"><span class="var">name</span> = <span class="str">"고양이"</span>       <span class="com"># name 이라는 이름표에 "고양이"를 담음</span>
+<span class="var">age</span> = <span class="num">3</span>             <span class="com"># age 라는 이름표에 숫자 3을 담음</span>
+<span class="builtin">print</span>(<span class="var">name</span>, <span class="var">age</span>)   <span class="com"># 출력 → 고양이 3</span></pre>
+
+  <h3>② 함수 — 입력을 받아 작업을 묶은 것</h3>
+  <p><code class="inl">def</code>로 시작합니다. "이 이름으로 부르면 이 일을 해라"를 정의해 놔요.</p>
+  <pre class="code"><span class="kw">def</span> <span class="fn">say_hello</span>(<span class="var">name</span>):        <span class="com"># name 이라는 입력을 받아</span>
+    <span class="builtin">print</span>(<span class="str">"안녕, "</span> + <span class="var">name</span>)   <span class="com"># 인사말을 출력하고</span>
+    <span class="kw">return</span> <span class="num">42</span>                <span class="com"># 결과로 42를 돌려준다</span>
+
+<span class="var">x</span> = <span class="fn">say_hello</span>(<span class="str">"민수"</span>)        <span class="com"># 안녕, 민수 / x 에는 42 가 담김</span></pre>
+
+  <h3>③ 클래스 — 데이터+기능을 한 덩어리로</h3>
+  <p>비슷한 것들을 만들어내는 <b>설계도</b>예요. 설계도(클래스)로 실제 사물(객체)을 찍어냅니다.</p>
+  <pre class="code"><span class="kw">class</span> <span class="fn">Dog</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="self">self</span>, <span class="var">name</span>):   <span class="com"># 처음 만들어질 때 한 번 실행</span>
+        <span class="self">self</span>.<span class="var">name</span> = <span class="var">name</span>        <span class="com"># 이 강아지 객체에 이름을 저장</span>
+
+    <span class="kw">def</span> <span class="fn">bark</span>(<span class="self">self</span>):               <span class="com"># 이 강아지가 할 수 있는 동작</span>
+        <span class="builtin">print</span>(<span class="self">self</span>.<span class="var">name</span> + <span class="str">" 멍멍!"</span>)
+
+<span class="var">d</span> = <span class="fn">Dog</span>(<span class="str">"바둑이"</span>)                  <span class="com"># 설계도로 강아지 한 마리 만들기</span>
+<span class="var">d</span>.<span class="fn">bark</span>()                            <span class="com"># 바둑이 멍멍!</span></pre>
+
+  <div class="keybox">
+    <div class="lbl">self가 뭐예요?</div>
+    클래스 안의 함수에서 <code class="inl">self</code>는 <b>"지금 그 동작을 하고 있는 본인"</b>을 가리켜요.
+    위 코드에서 <code class="inl">d.bark()</code>를 부르면 그 안의 <code class="inl">self</code>는 <b>d 본인</b>입니다.
+    <code class="inl">self.name</code>은 "내 이름표"라는 뜻이에요.
+  </div>
+
+  <h3>④ 리스트와 반복문</h3>
+  <pre class="code"><span class="var">fruits</span> = [<span class="str">"사과"</span>, <span class="str">"배"</span>, <span class="str">"감"</span>]   <span class="com"># 리스트 = 여러 값을 순서대로 담는 통</span>
+
+<span class="kw">for</span> <span class="var">f</span> <span class="kw">in</span> <span class="var">fruits</span>:                <span class="com"># fruits 안의 값을 하나씩 꺼내 f 에 담아 반복</span>
+    <span class="builtin">print</span>(<span class="var">f</span>)                       <span class="com"># 사과 / 배 / 감 한 줄씩</span>
+
+<span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>):              <span class="com"># range(10) = 0,1,2,...,9</span>
+    <span class="builtin">print</span>(<span class="var">i</span>)</pre>
+
+  <h3>⑤ NumPy — 숫자 배열의 슈퍼파워</h3>
+  <p>파이썬 기본 리스트는 느려요. <b>NumPy(넘파이)</b>는 수만~수백만 개 숫자를 <b>한꺼번에</b> 계산해주는 라이브러리예요. 이미지처럼 숫자가 잔뜩 든 데이터엔 필수입니다.</p>
+
+  <pre class="code"><span class="kw">import</span> numpy <span class="kw">as</span> <span class="var">np</span>                  <span class="com"># numpy 를 np 라는 별명으로 부르겠다</span>
+
+<span class="var">a</span> = <span class="var">np</span>.<span class="fn">array</span>([<span class="num">1</span>, <span class="num">2</span>, <span class="num">3</span>])           <span class="com"># 배열 = 숫자 일렬로 늘어놓은 줄</span>
+<span class="var">b</span> = <span class="var">np</span>.<span class="fn">array</span>([<span class="num">10</span>, <span class="num">20</span>, <span class="num">30</span>])
+
+<span class="builtin">print</span>(<span class="var">a</span> + <span class="var">b</span>)                       <span class="com"># [11, 22, 33] — 자리마다 더해줌</span>
+<span class="builtin">print</span>(<span class="var">a</span>.<span class="fn">sum</span>())                      <span class="com"># 6   — 전부 합</span>
+<span class="builtin">print</span>(<span class="var">a</span>.<span class="var">shape</span>)                     <span class="com"># (3,) — "이 배열은 길이 3"</span></pre>
+
+  <div class="analogy">
+    <div class="lbl">🎯 비유 — NumPy = 엑셀 열 전체 계산</div>
+    엑셀에서 A1~A100을 한꺼번에 ×2 하듯, NumPy는 <b>배열 전체에 한 번에 같은 연산</b>을 합니다.
+    이미지 1장은 픽셀 3,072개의 줄이고, 5,000장이면 5,000줄짜리 큰 표예요. 이걸 빠르게 한 번에 다루는 게 NumPy의 일입니다.
+  </div>
+</section>
+
+<!-- 2 imports -->
+<section class="card" id="s2">
+  <span class="kicker">코드 ⓪</span>
+  <h2 class="title"><span class="num-badge">2</span>라이브러리 불러오기</h2>
+  <p>파이썬은 작은 본체만 가지고 있고, 필요한 기능은 <b>라이브러리</b>를 불러와 씁니다. 여기서는 5개를 가져와요.</p>
+
+  <pre class="code"><span class="kw">import</span> numpy <span class="kw">as</span> <span class="var">np</span>
+<span class="kw">import</span> torchvision
+<span class="kw">from</span> PIL <span class="kw">import</span> Image
+<span class="kw">from</span> IPython.display <span class="kw">import</span> display
+<span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> <span class="var">plt</span></pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">import</span> numpy <span class="kw">as</span> <span class="var">np</span></div>
+      <div class="ldesc"><b>NumPy</b>를 가져와 <code class="inl">np</code>로 줄여 부르겠다는 뜻. 숫자 배열·연산의 표준 도구.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">import</span> torchvision</div>
+      <div class="ldesc"><b>torchvision</b>은 PyTorch 생태계의 영상 처리 라이브러리. <b>CIFAR-10 자동 다운로드</b>가 들어 있어 이걸로 데이터를 얻습니다.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">from</span> PIL <span class="kw">import</span> Image</div>
+      <div class="ldesc"><b>PIL(Pillow)</b>은 이미지 파일을 다루는 라이브러리. 그 중 <code class="inl">Image</code> 하나만 콕 집어 가져옴.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">from</span> IPython.display <span class="kw">import</span> display</div>
+      <div class="ldesc"><b>주피터 노트북</b>에서 이미지·표 등을 셀 아래 예쁘게 출력해주는 도구. <code class="inl">display(이미지)</code>로 씁니다.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">import</span> matplotlib.pyplot <span class="kw">as</span> <span class="var">plt</span></div>
+      <div class="ldesc"><b>matplotlib</b>는 그래프·이미지를 그리는 라이브러리. <code class="inl">plt</code>라는 별명으로 부릅니다.</div>
+    </div>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">import ... as ? from ... import ?</div>
+    <b>import X</b> = X 통째로. <b>import X as Y</b> = X를 Y라는 짧은 별명으로. <b>from X import Z</b> = X 안에서 Z만 콕 집어 가져옴.
+    셋 다 똑같이 "남이 만든 코드를 끌어와 쓴다"는 뜻이에요.
+  </div>
+</section>
+
+<!-- 3 데이터 로드 -->
+<section class="card" id="s3">
+  <span class="kicker green">코드 ①</span>
+  <h2 class="title"><span class="num-badge">3</span>데이터 로드 — CIFAR-10 가져오기</h2>
+  <p>이 함수는 <b>"이미지 5만 장을 컴퓨터가 다루기 좋은 큰 표로 정리해서 돌려주는"</b> 일을 합니다.</p>
+
+  <pre class="code"><span class="kw">def</span> <span class="fn">load_cifar10</span>(<span class="var">train</span>=<span class="kw">True</span>):
+    <span class="str">"""
+    torchvision으로 CIFAR-10을 다운로드하고
+    (N, 3072) serial 배열과 레이블 배열을 반환합니다.
+    """</span>
+    <span class="var">dataset</span> = torchvision.datasets.<span class="fn">CIFAR10</span>(
+        <span class="var">root</span>=<span class="str">'.'</span>, <span class="var">train</span>=<span class="var">train</span>, <span class="var">download</span>=<span class="kw">False</span>
+    )
+
+    <span class="var">data</span> = <span class="var">dataset</span>.<span class="var">data</span>
+    <span class="var">serials</span> = <span class="var">np</span>.<span class="fn">concatenate</span>([
+        <span class="var">data</span>[:, :, :, <span class="num">0</span>].<span class="fn">reshape</span>(-<span class="num">1</span>, <span class="num">1024</span>),
+        <span class="var">data</span>[:, :, :, <span class="num">1</span>].<span class="fn">reshape</span>(-<span class="num">1</span>, <span class="num">1024</span>),
+        <span class="var">data</span>[:, :, :, <span class="num">2</span>].<span class="fn">reshape</span>(-<span class="num">1</span>, <span class="num">1024</span>),
+    ], <span class="var">axis</span>=<span class="num">1</span>)
+
+    <span class="var">labels</span> = <span class="var">np</span>.<span class="fn">array</span>(<span class="var">dataset</span>.<span class="var">targets</span>)
+
+    <span class="kw">return</span> <span class="var">serials</span>, <span class="var">labels</span>
+
+
+<span class="var">train_serials</span>, <span class="var">train_labels</span> = <span class="fn">load_cifar10</span>(<span class="var">train</span>=<span class="kw">True</span>)
+<span class="var">test_serials</span>,  <span class="var">test_labels</span>  = <span class="fn">load_cifar10</span>(<span class="var">train</span>=<span class="kw">False</span>)
+
+<span class="builtin">print</span>(<span class="var">train_serials</span>.<span class="var">shape</span>)
+<span class="com"># 결과 출력: (50000, 3072)</span></pre>
+
+  <h3>한 줄씩 풀어보기</h3>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">load_cifar10</span>(<span class="var">train</span>=<span class="kw">True</span>):</div>
+      <div class="ldesc"><code class="inl">load_cifar10</code>이라는 <b>함수</b>를 만듦. 입력 <code class="inl">train</code>이 True면 학습용, False면 테스트용 데이터를 가져옴. <code class="inl">=True</code>는 <b>"안 적으면 기본값으로 True"</b>라는 뜻.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">dataset</span> = torchvision.datasets.<span class="fn">CIFAR10</span>(
+    <span class="var">root</span>=<span class="str">'.'</span>, <span class="var">train</span>=<span class="var">train</span>, <span class="var">download</span>=<span class="kw">False</span>
+)</div>
+      <div class="ldesc">
+        torchvision이 준비해둔 <b>CIFAR-10 데이터셋 객체</b>를 만든다.<br>
+        • <code class="inl">root='.'</code> = 데이터를 <b>현재 폴더</b>에서 찾음<br>
+        • <code class="inl">train=train</code> = 학습용/테스트용 선택<br>
+        • <code class="inl">download=False</code> = 없으면 새로 받지 말고 에러내. (이미 받아뒀다고 가정)
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">data</span> = <span class="var">dataset</span>.<span class="var">data</span></div>
+      <div class="ldesc">데이터셋 안의 <b>실제 픽셀 배열</b>을 꺼냄. 모양은 <code class="inl">(50000, 32, 32, 3)</code>.<br>
+      <span class="tip">→ 5만 장 × 가로 32 × 세로 32 × 색 채널 3개(R, G, B)</span></div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">data</span>[:, :, :, <span class="num">0</span>]</div>
+      <div class="ldesc"><b>슬라이싱(잘라보기)</b>. <code class="inl">:</code>는 "전부", 마지막의 <code class="inl">0</code>은 <b>0번째 채널 = R(빨강)</b>만 뽑겠다는 뜻. 결과 모양은 <code class="inl">(50000, 32, 32)</code>.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode">.<span class="fn">reshape</span>(-<span class="num">1</span>, <span class="num">1024</span>)</div>
+      <div class="ldesc"><b>모양 바꾸기</b>. 32×32=1024개 픽셀을 한 줄로 펼침. <code class="inl">-1</code>은 <b>"나머지는 알아서 계산해줘"</b> 즉 5만. 결과 <code class="inl">(50000, 1024)</code>.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">concatenate</span>([R, G, B], <span class="var">axis</span>=<span class="num">1</span>)</div>
+      <div class="ldesc">세 배열을 <b>옆으로 이어붙이기</b>(axis=1 = 좌우 방향). R 1024 + G 1024 + B 1024 = 한 줄에 <b>3072개</b>. 최종 <code class="inl">(50000, 3072)</code>.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">labels</span> = <span class="var">np</span>.<span class="fn">array</span>(<span class="var">dataset</span>.<span class="var">targets</span>)</div>
+      <div class="ldesc">정답 라벨(0~9 숫자)을 NumPy 배열로 변환. 모양 <code class="inl">(50000,)</code>.<br>
+      <span class="tip">예) 라벨 3 = cat, 9 = truck</span></div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="kw">return</span> <span class="var">serials</span>, <span class="var">labels</span></div>
+      <div class="ldesc">함수를 부른 사람에게 <b>두 결과를 한꺼번에 돌려줌</b>. 파이썬은 콤마로 여러 값을 동시에 반환 가능.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="var">train_serials</span>, <span class="var">train_labels</span> = <span class="fn">load_cifar10</span>(<span class="var">train</span>=<span class="kw">True</span>)</div>
+      <div class="ldesc">함수 호출. 돌아온 두 값을 각각 <code class="inl">train_serials</code>, <code class="inl">train_labels</code>에 한 번에 받음.</div>
+    </div>
+
+    <div class="row">
+      <div class="lcode"><span class="builtin">print</span>(<span class="var">train_serials</span>.<span class="var">shape</span>)</div>
+      <div class="ldesc">배열의 <b>모양</b>을 화면에 표시. 결과: <code class="inl">(50000, 3072)</code>. → "5만 장이 각각 3072개의 숫자로 표현돼 있다"</div>
+    </div>
+  </div>
+
+  <h3>왜 굳이 1D로 펼칠까?</h3>
+  <div class="shape-diagram">
+    <b>원본:</b> (50000, 32, 32, 3) &nbsp; — 4차원 (장수, 가로, 세로, 채널)
+    <div class="arrow">↓ R·G·B를 따로 펴서 옆에 붙이기</div>
+    <b>serial:</b> (50000, 3072) &nbsp; — 2차원 표 (장수, 픽셀 일렬)
+  </div>
+
+  <div class="channel-row">
+    <div class="channel-box r">R 1024<small>0~1023번</small></div>
+    <div style="font-weight:800; color:var(--brand);">+</div>
+    <div class="channel-box g">G 1024<small>1024~2047번</small></div>
+    <div style="font-weight:800; color:var(--brand);">+</div>
+    <div class="channel-box b">B 1024<small>2048~3071번</small></div>
+  </div>
+
+  <div class="analogy">
+    <div class="lbl">📏 비유 — 책을 줄세우기</div>
+    이미지 한 장을 <b>"3072개의 숫자가 일렬로 늘어선 한 줄"</b>로 만들면, 두 이미지를 비교할 때 <b>"줄과 줄의 차이"</b>만 보면 돼서 계산이 훨씬 단순해져요.
+    이걸 <b>serial(직렬화)</b>이라고 부릅니다.
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">픽셀 값의 범위</div>
+    각 픽셀은 <b>0~255 사이 정수</b>예요. 0이 가장 어둡고 255가 가장 밝아요. 컬러 사진은 R/G/B 각 채널마다 이 숫자가 따로 있어 <b>32×32×3 = 3072</b>개 숫자가 한 장을 표현합니다.
+  </div>
+</section>
+
+<!-- 4 시각화 함수 -->
+<section class="card" id="s4">
+  <span class="kicker">코드 ②</span>
+  <h2 class="title"><span class="num-badge">4</span>1D 배열을 다시 이미지로 되돌리기</h2>
+  <p>위에서 펼쳐버린 줄을 사람이 볼 수 있는 사진으로 <b>거꾸로</b> 복원하는 함수입니다.</p>
+
+  <pre class="code"><span class="kw">def</span> <span class="fn">serial2image</span>(<span class="var">serial</span>):
+    <span class="str">"""
+    serial: (3072,) 배열 — R 1024개, G 1024개, B 1024개 순서
+    각 채널을 (32, 32)로 reshape한 뒤 (32, 32, 3) 이미지로 합쳐 반환합니다.
+    """</span>
+    <span class="var">red</span>   = <span class="var">serial</span>[:<span class="num">1024</span>].<span class="fn">reshape</span>(<span class="num">32</span>, <span class="num">32</span>)
+    <span class="var">green</span> = <span class="var">serial</span>[<span class="num">1024</span>:<span class="num">2048</span>].<span class="fn">reshape</span>(<span class="num">32</span>, <span class="num">32</span>)
+    <span class="var">blue</span>  = <span class="var">serial</span>[<span class="num">2048</span>:].<span class="fn">reshape</span>(<span class="num">32</span>, <span class="num">32</span>)
+
+    <span class="kw">return</span> <span class="var">np</span>.<span class="fn">stack</span>([<span class="var">red</span>, <span class="var">green</span>, <span class="var">blue</span>], <span class="var">axis</span>=<span class="num">2</span>)
+
+
+<span class="var">i</span> = <span class="num">1</span>
+<span class="fn">display</span>(Image.<span class="fn">fromarray</span>(<span class="fn">serial2image</span>(<span class="var">train_serials</span>[<span class="var">i</span>])))</pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="var">serial</span>[:<span class="num">1024</span>]</div>
+      <div class="ldesc"><b>슬라이스</b>. "처음부터 1024번째 직전까지" = R채널 1024개를 뽑음. 파이썬 슬라이스는 <b>끝 번호를 포함하지 않음</b>.</div>
+    </div>
+    <div class="row">
+      <div class="lcode">.<span class="fn">reshape</span>(<span class="num">32</span>, <span class="num">32</span>)</div>
+      <div class="ldesc">일렬 1024개를 다시 <b>32 × 32 격자</b>로 접음. 이게 빨간 채널 사진.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">serial</span>[<span class="num">1024</span>:<span class="num">2048</span>]</div>
+      <div class="ldesc">1024번부터 2047번까지 = G채널.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">serial</span>[<span class="num">2048</span>:]</div>
+      <div class="ldesc">2048번부터 끝까지 = B채널.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">stack</span>([R,G,B], <span class="var">axis</span>=<span class="num">2</span>)</div>
+      <div class="ldesc">세 장의 32×32를 <b>겹쳐 쌓아</b> 32×32×3 컬러 이미지로 만든다. axis=2는 "세 번째 축 방향으로 쌓아라"는 뜻.</div>
+    </div>
+    <div class="row">
+      <div class="lcode">Image.<span class="fn">fromarray</span>(...)</div>
+      <div class="ldesc">NumPy 배열을 PIL 이미지 객체로 변환. 화면 출력용 포맷.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="fn">display</span>(...)</div>
+      <div class="ldesc">노트북 셀 아래에 실제로 그림을 띄움.</div>
+    </div>
+  </div>
+
+  <div class="analogy">
+    <div class="lbl">🧩 비유 — 레고를 도로 끼우기</div>
+    serial은 <b>모든 레고 블록을 한 줄로 늘어놓은 상태</b>예요. <code class="inl">serial2image</code>는 그걸 R, G, B 세 묶음으로 나눠 32×32 판에 도로 끼우고, 세 판을 겹쳐 컬러 사진을 복원합니다.
+  </div>
+</section>
+
+<!-- 5 클래스별 한 장 -->
+<section class="card" id="s5">
+  <span class="kicker amber">코드 ③</span>
+  <h2 class="title"><span class="num-badge">5</span>10개 클래스를 한 장씩 가로로 출력</h2>
+  <p>"각 클래스가 어떤 이미지인지" 눈으로 확인하는 단계예요.</p>
+
+  <pre class="code"><span class="var">class_names</span> = [<span class="str">'airplane'</span>, <span class="str">'automobile'</span>, <span class="str">'bird'</span>, <span class="str">'cat'</span>, <span class="str">'deer'</span>,
+                <span class="str">'dog'</span>, <span class="str">'frog'</span>, <span class="str">'horse'</span>, <span class="str">'ship'</span>, <span class="str">'truck'</span>]
+
+<span class="var">plt</span>.<span class="fn">figure</span>(<span class="var">figsize</span>=(<span class="num">15</span>, <span class="num">2</span>))
+<span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>):
+    <span class="var">idx</span> = <span class="var">np</span>.<span class="fn">where</span>(<span class="var">train_labels</span> == <span class="var">i</span>)[<span class="num">0</span>][<span class="num">0</span>]
+    <span class="var">plt</span>.<span class="fn">subplot</span>(<span class="num">1</span>, <span class="num">10</span>, <span class="var">i</span> + <span class="num">1</span>)
+    <span class="var">plt</span>.<span class="fn">imshow</span>(<span class="fn">serial2image</span>(<span class="var">train_serials</span>[<span class="var">idx</span>]))
+    <span class="var">plt</span>.<span class="fn">title</span>(<span class="var">class_names</span>[<span class="var">i</span>], <span class="var">fontsize</span>=<span class="num">8</span>)
+    <span class="var">plt</span>.<span class="fn">axis</span>(<span class="str">'off'</span>)
+<span class="var">plt</span>.<span class="fn">show</span>()</pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="var">class_names</span> = [<span class="str">'airplane'</span>, ...]</div>
+      <div class="ldesc">라벨 숫자 0~9를 사람이 읽을 수 있는 <b>이름표 리스트</b>로 매핑. 0=airplane, 1=automobile, ...</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">figure</span>(<span class="var">figsize</span>=(<span class="num">15</span>, <span class="num">2</span>))</div>
+      <div class="ldesc">새 그림판을 만든다. <b>가로 15인치, 세로 2인치</b>로 옆으로 길쭉.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">for</span> <span class="var">i</span> <span class="kw">in</span> <span class="builtin">range</span>(<span class="num">10</span>):</div>
+      <div class="ldesc">i가 0,1,2,...,9까지 <b>10번 반복</b>. 클래스마다 한 번씩.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">where</span>(<span class="var">train_labels</span> == <span class="var">i</span>)</div>
+      <div class="ldesc">"라벨이 i인 위치를 모두 알려줘". 50,000개 중 해당 라벨인 위치(인덱스) 목록을 돌려준다.</div>
+    </div>
+    <div class="row">
+      <div class="lcode">[<span class="num">0</span>][<span class="num">0</span>]</div>
+      <div class="ldesc">np.where는 튜플로 답하므로 첫 번째 <code class="inl">[0]</code>으로 배열을 꺼내고, 두 번째 <code class="inl">[0]</code>으로 그 안의 <b>맨 앞 위치</b>를 뽑음.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">subplot</span>(<span class="num">1</span>, <span class="num">10</span>, <span class="var">i</span>+<span class="num">1</span>)</div>
+      <div class="ldesc">"1행 10열짜리 격자에서 <b>i+1번째 칸</b>을 골라 거기에 그려라". (subplot 번호는 1부터 시작)</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">imshow</span>(...)</div>
+      <div class="ldesc">고른 칸에 이미지를 표시. <code class="inl">serial2image</code>로 펼친 배열을 다시 사진으로 복원해 넣음.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">title</span>(...)</div>
+      <div class="ldesc">이미지 위에 클래스 이름을 작은 제목으로.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">axis</span>(<span class="str">'off'</span>)</div>
+      <div class="ldesc">x/y 축 숫자/눈금을 끈다. 그림만 깔끔하게.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">show</span>()</div>
+      <div class="ldesc">완성된 그림판을 화면에 띄움.</div>
+    </div>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">np.where(조건) — 진짜 자주 쓰여요</div>
+    <code class="inl">train_labels == i</code>는 5만 개 라벨을 <b>한꺼번에</b> "i인가?"로 비교해 <b>True/False 배열</b>을 만들어요.
+    <code class="inl">np.where</code>는 그중 <b>True인 자리의 번호들</b>을 돌려줍니다. NumPy의 가장 강력한 패턴 중 하나예요.
+  </div>
+</section>
+
+<!-- 6 인터페이스 -->
+<section class="card" id="s6">
+  <span class="kicker purple">코드 ④</span>
+  <h2 class="title"><span class="num-badge">6</span>train / predict 인터페이스</h2>
+  <p>본격 구현 전에, <b>"학습"</b>과 <b>"예측"</b>이라는 두 가지 동작의 <b>모양</b>만 먼저 정의해두는 단계예요. 머신러닝 코드는 보통 이 두 단어를 중심으로 짜입니다.</p>
+
+  <pre class="code"><span class="kw">def</span> <span class="fn">train</span>(<span class="var">images</span>, <span class="var">labels</span>):
+    <span class="kw">return</span> <span class="fn">Model</span>(<span class="var">images</span>, <span class="var">labels</span>)
+
+
+<span class="kw">def</span> <span class="fn">predict</span>(<span class="var">model</span>, <span class="var">test_images</span>):
+    <span class="kw">return</span> <span class="fn">model</span>(<span class="var">test_images</span>)</pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">train</span>(<span class="var">images</span>, <span class="var">labels</span>):
+    <span class="kw">return</span> <span class="fn">Model</span>(<span class="var">images</span>, <span class="var">labels</span>)</div>
+      <div class="ldesc">"학습 = <b>Model 객체를 하나 만들어 돌려주는 것</b>"이라 정의. 1-NN은 학습할 게 따로 없어서 그저 데이터를 그대로 모델에 담아두는 게 끝.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">predict</span>(<span class="var">model</span>, <span class="var">test_images</span>):
+    <span class="kw">return</span> <span class="fn">model</span>(<span class="var">test_images</span>)</div>
+      <div class="ldesc">"예측 = <b>모델을 함수처럼 호출</b>해서 결과를 받는 것"이라 정의. <code class="inl">model(test_images)</code>처럼 객체를 함수처럼 부르는 비결은 다음 절에서.</div>
+    </div>
+  </div>
+
+  <div class="analogy">
+    <div class="lbl">🍳 비유 — 요리사 채용</div>
+    <code class="inl">train</code>은 도서관에 책을 잔뜩 넣어 <b>새 사서를 한 명 만드는 일</b>. <code class="inl">predict</code>는 그 사서에게 책을 들이밀며 "이게 뭔지 알려줘"라고 묻는 일이에요.
+    1-NN의 사서는 그냥 <b>책 더미를 통째로 기억</b>해 두는 게 학습입니다.
+  </div>
+</section>
+
+<!-- 7 Model 클래스 -->
+<section class="card" id="s7">
+  <span class="kicker red">코드 ⑤ · 핵심</span>
+  <h2 class="title"><span class="num-badge">7</span>Model 클래스 — 1-NN의 본체</h2>
+  <p>이 페이지에서 가장 중요한 부분이에요. 차근차근 봅시다.</p>
+
+  <pre class="code"><span class="kw">class</span> <span class="fn">Model</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="self">self</span>, <span class="var">images</span>, <span class="var">labels</span>):
+        <span class="self">self</span>.<span class="var">images</span> = <span class="var">images</span>
+        <span class="self">self</span>.<span class="var">labels</span> = <span class="var">labels</span>
+
+    <span class="kw">def</span> <span class="fn">__call__</span>(<span class="self">self</span>, <span class="var">test_images</span>):
+        <span class="kw">return</span> [<span class="self">self</span>.<span class="fn">predict</span>(<span class="var">image</span>) <span class="kw">for</span> <span class="var">image</span> <span class="kw">in</span> <span class="var">test_images</span>]
+
+    <span class="kw">def</span> <span class="fn">predict</span>(<span class="self">self</span>, <span class="var">image</span>):
+        <span class="var">num_images</span> = <span class="self">self</span>.<span class="var">images</span>.<span class="var">shape</span>[<span class="num">0</span>]
+
+        <span class="var">distances</span> = <span class="var">np</span>.<span class="fn">abs</span>(<span class="self">self</span>.<span class="var">images</span> - <span class="var">image</span>).<span class="fn">sum</span>(<span class="var">axis</span>=<span class="num">1</span>)
+
+        <span class="var">idx</span> = <span class="var">np</span>.<span class="fn">argmin</span>(<span class="var">distances</span>)
+
+        <span class="kw">return</span> <span class="self">self</span>.<span class="var">labels</span>[<span class="var">idx</span>]</pre>
+
+  <h3>① <code class="inl">__init__</code> — 모델이 만들어질 때 한 번</h3>
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">__init__</span>(<span class="self">self</span>, <span class="var">images</span>, <span class="var">labels</span>):</div>
+      <div class="ldesc"><code class="inl">Model(...)</code>로 처음 만들어질 때 자동 실행되는 <b>생성자</b>.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="self">self</span>.<span class="var">images</span> = <span class="var">images</span>
+<span class="self">self</span>.<span class="var">labels</span> = <span class="var">labels</span></div>
+      <div class="ldesc">받은 학습 데이터를 <b>이 모델 본인의 속성</b>으로 저장. "다음에 필요할 때 또 꺼내쓸 수 있도록" 가지고 있는 것.</div>
+    </div>
+  </div>
+
+  <h3>② <code class="inl">__call__</code> — 객체를 함수처럼 부를 때</h3>
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">__call__</span>(<span class="self">self</span>, <span class="var">test_images</span>):</div>
+      <div class="ldesc">파이썬의 마법 메서드. <b><code class="inl">model(...)</code>처럼 모델을 함수처럼 부르면 이게 실행</b>됨. 그래서 <code class="inl">predict(model, X)</code> 안에서 <code class="inl">model(X)</code>가 동작.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">return</span> [<span class="self">self</span>.<span class="fn">predict</span>(<span class="var">image</span>) <span class="kw">for</span> <span class="var">image</span> <span class="kw">in</span> <span class="var">test_images</span>]</div>
+      <div class="ldesc"><b>리스트 컴프리헨션</b>. "test_images 안에서 image를 하나씩 꺼내, 각각 self.predict(image)를 부른 결과를 모은 리스트". 즉 <b>여러 장을 받아 하나씩 예측하고 리스트로 반환</b>.</div>
+    </div>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">리스트 컴프리헨션 = 짧은 for 루프</div>
+    <code class="inl">[f(x) for x in xs]</code> 는 아래와 똑같아요:
+    <pre class="code" style="margin-top:8px;"><span class="var">result</span> = []
+<span class="kw">for</span> <span class="var">x</span> <span class="kw">in</span> <span class="var">xs</span>:
+    <span class="var">result</span>.<span class="fn">append</span>(<span class="fn">f</span>(<span class="var">x</span>))</pre>
+  </div>
+
+  <h3>③ <code class="inl">predict</code> — 진짜 핵심!</h3>
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="kw">def</span> <span class="fn">predict</span>(<span class="self">self</span>, <span class="var">image</span>):</div>
+      <div class="ldesc"><b>한 장</b>의 테스트 이미지(<code class="inl">image</code>: 3072개 숫자가 든 1D 배열)를 받아 라벨 하나를 돌려줄 것.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">num_images</span> = <span class="self">self</span>.<span class="var">images</span>.<span class="var">shape</span>[<span class="num">0</span>]</div>
+      <div class="ldesc">학습 이미지의 개수를 구함. (실제 계산엔 안 쓰여요 — 이해/디버깅용)</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">distances</span> = <span class="var">np</span>.<span class="fn">abs</span>(<span class="self">self</span>.<span class="var">images</span> - <span class="var">image</span>).<span class="fn">sum</span>(<span class="var">axis</span>=<span class="num">1</span>)</div>
+      <div class="ldesc"><b>1-NN의 심장.</b> 학습 이미지 전체와 테스트 이미지 1장의 <b>L1 거리</b>를 한 번에 계산. 결과는 길이 N짜리 거리 배열.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">idx</span> = <span class="var">np</span>.<span class="fn">argmin</span>(<span class="var">distances</span>)</div>
+      <div class="ldesc">거리 배열에서 <b>가장 작은 값의 위치</b>를 알려줌. = 가장 가까운 학습 이미지의 번호.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="kw">return</span> <span class="self">self</span>.<span class="var">labels</span>[<span class="var">idx</span>]</div>
+      <div class="ldesc">그 번호에 해당하는 <b>라벨</b>을 답으로 돌려줌. 끝!</div>
+    </div>
+  </div>
+
+  <h3>거리 계산을 자세히</h3>
+  <p>한 줄로 적혔지만 NumPy의 마법이 세 단계로 작동해요.</p>
+
+  <div class="step"><div class="n">1</div><div class="tx"><b><code class="inl">self.images - image</code></b><br>
+    <code class="inl">self.images</code>는 <code class="inl">(N, 3072)</code>, <code class="inl">image</code>는 <code class="inl">(3072,)</code>. NumPy는 <b>브로드캐스팅</b>으로 두 모양을 맞춰 <b>모든 학습 이미지에서 테스트 이미지를 자리마다 빼줌</b>. 결과 <code class="inl">(N, 3072)</code>.</div></div>
+
+  <div class="step"><div class="n">2</div><div class="tx"><b><code class="inl">np.abs(...)</code></b><br>
+    뺀 결과의 <b>부호를 떼고 크기만</b> 남김. 픽셀이 얼마나 달랐는지 그 크기만 중요.</div></div>
+
+  <div class="step"><div class="n">3</div><div class="tx"><b><code class="inl">.sum(axis=1)</code></b><br>
+    한 줄(이미지 1장)당 3072개 차이를 <b>옆으로 다 더함</b>. 한 장의 "총 픽셀 차이"가 한 숫자로 요약됨. 최종 <code class="inl">(N,)</code>.</div></div>
+
+  <div class="shape-diagram">
+    self.images <span style="color:var(--brand);">(N, 3072)</span> &nbsp;−&nbsp; image <span style="color:var(--brand);">(3072,)</span>
+    <div class="arrow">↓ 브로드캐스팅 + 절댓값</div>
+    diff <span style="color:var(--brand);">(N, 3072)</span>
+    <div class="arrow">↓ axis=1 방향으로 sum</div>
+    distances <span style="color:var(--brand);">(N,)</span> &nbsp;— 각 학습 이미지까지의 L1 거리
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">브로드캐스팅 (broadcasting)</div>
+    NumPy는 모양이 다른 두 배열을 빼/더할 때 <b>작은 쪽을 자동으로 늘여서 맞춰</b>줍니다.
+    <code class="inl">(N, 3072) − (3072,)</code>는 작은 쪽을 N번 복제한 것처럼 동작해 한 번에 N장을 처리해줘요. for문 없이 빠릅니다.
+  </div>
+
+  <h3>L1 거리(맨해튼 거리)란?</h3>
+  <p>두 이미지 A, B의 픽셀 차이의 <b>절댓값 합</b>입니다.</p>
+  <pre class="code">L1(A, B) = |A[<span class="num">0</span>]-B[<span class="num">0</span>]| + |A[<span class="num">1</span>]-B[<span class="num">1</span>]| + ... + |A[<span class="num">3071</span>]-B[<span class="num">3071</span>]|</pre>
+
+  <div class="analogy">
+    <div class="lbl">🚕 비유 — 맨해튼 거리</div>
+    뉴욕 맨해튼은 도로가 격자무늬라 <b>대각선으로 못 가요</b>. 가로+세로로만 이동하는 합산 거리. 그래서 이름이 <b>"맨해튼 거리"</b>.
+    참고로 <b>L2 거리</b>는 일반적인 직선거리(피타고라스)예요.
+  </div>
+
+  <h3>왜 이게 "예측"이 되나?</h3>
+  <div class="ok">
+    <div class="lbl">핵심 아이디어</div>
+    "비슷한 그림은 비슷한 클래스다"라고 <b>가정</b>합니다.<br>
+    학습 데이터 안에서 픽셀 단위로 가장 닮은 1장을 찾으면, 그 라벨이 새 이미지의 라벨일 거라고 베팅하는 거예요.
+    단순하지만, 픽셀이 곧 의미는 아니라서 종종 틀려요. (밝기·배경에 쉽게 흔들림)
+  </div>
+</section>
+
+<!-- 8 sanity -->
+<section class="card" id="s8">
+  <span class="kicker green">코드 ⑥</span>
+  <h2 class="title"><span class="num-badge">8</span>구현 확인 (sanity check)</h2>
+  <p>구현이 맞는지 빠르게 점검. <b>학습 데이터로 자기 자신을 예측</b>하면, 자기 자신과 거리가 0이라 무조건 자기 라벨이 나와야 해요.</p>
+
+  <pre class="code"><span class="var">images</span> = <span class="var">train_serials</span>[:<span class="num">1000</span>].<span class="fn">astype</span>(<span class="builtin">float</span>)
+<span class="var">labels</span> = <span class="var">train_labels</span>[:<span class="num">1000</span>]
+
+<span class="var">model</span> = <span class="fn">train</span>(<span class="var">images</span>, <span class="var">labels</span>)
+<span class="var">test_labels_sanity</span> = <span class="fn">predict</span>(<span class="var">model</span>, <span class="var">images</span>[:<span class="num">10</span>])
+
+<span class="builtin">print</span>(<span class="str">"예측:"</span>, <span class="var">test_labels_sanity</span>)
+<span class="builtin">print</span>(<span class="str">"정답:"</span>, <span class="builtin">list</span>(<span class="var">model</span>.<span class="var">labels</span>[:<span class="num">10</span>]))</pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="var">train_serials</span>[:<span class="num">1000</span>]</div>
+      <div class="ldesc">학습 데이터에서 <b>앞쪽 1000장</b>만 사용. 5만 전체를 쓰면 너무 느려서 작게 시작.</div>
+    </div>
+    <div class="row">
+      <div class="lcode">.<span class="fn">astype</span>(<span class="builtin">float</span>)</div>
+      <div class="ldesc">픽셀 값을 <b>정수(uint8)에서 실수(float)로</b> 변환. 다음 절 ⚠️ 박스에서 설명!</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">model</span> = <span class="fn">train</span>(...)</div>
+      <div class="ldesc">앞에서 정의한 함수로 모델 생성. 사실상 Model 객체에 데이터를 담아둘 뿐.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="fn">predict</span>(<span class="var">model</span>, <span class="var">images</span>[:<span class="num">10</span>])</div>
+      <div class="ldesc">학습용 첫 10장을 다시 테스트로 넣어봄 → 자기 자신이 가장 가까우니 자기 라벨이 나와야 정상.</div>
+    </div>
+  </div>
+
+  <div class="ok">
+    <div class="lbl">✅ 기대 결과</div>
+    <code class="inl">예측: [6, 9, 9, 4, 1, 1, 2, 7, 8, 3]</code><br>
+    <code class="inl">정답: [6, 9, 9, 4, 1, 1, 2, 7, 8, 3]</code><br>
+    두 줄이 똑같다면 distance·argmin 로직이 제대로 동작한다는 신호.
+  </div>
+
+  <div class="warn">
+    <div class="lbl">⚠️ <code class="inl">.astype(float)</code> 안 하면 큰일 나는 이유</div>
+    원본 픽셀은 <b>uint8 (0~255만 표현 가능한 작은 정수)</b>입니다. 이걸로 뺄셈을 하면 <b>음수가 0보다 작은 값으로 표현될 수 없어</b> 200처럼 큰 값으로 둘러붙는 <b>오버플로(overflow)</b>가 일어나요.
+    예: <code class="inl">5 - 10</code>이 <code class="inl">−5</code>가 아니라 <code class="inl">251</code>로 계산됨.
+    그래서 빼기 전에 <b>실수로 바꿔</b> 음수를 정상적으로 다루도록 합니다.
+  </div>
+</section>
+
+<!-- 9 정확도 -->
+<section class="card" id="s9">
+  <span class="kicker">코드 ⑦</span>
+  <h2 class="title"><span class="num-badge">9</span>테스트 데이터로 정확도 측정</h2>
+  <p>이제 모델을 진짜 평가합니다. 학습엔 보지 못한 테스트 이미지를 줘서 얼마나 맞히는지.</p>
+
+  <pre class="code"><span class="var">model</span> = <span class="fn">train</span>(<span class="var">train_serials</span>[:<span class="num">5000</span>].<span class="fn">astype</span>(<span class="builtin">float</span>), <span class="var">train_labels</span>[:<span class="num">5000</span>])
+
+<span class="var">predictions</span> = <span class="fn">predict</span>(<span class="var">model</span>, <span class="var">test_serials</span>[:<span class="num">500</span>].<span class="fn">astype</span>(<span class="builtin">float</span>))
+
+<span class="var">accuracy</span> = <span class="var">np</span>.<span class="fn">mean</span>(<span class="var">np</span>.<span class="fn">array</span>(<span class="var">predictions</span>) == <span class="var">test_labels</span>[:<span class="num">500</span>])
+<span class="builtin">print</span>(<span class="fn">f</span><span class="str">"1-NN 정확도: {accuracy:.1%}"</span>)
+<span class="com"># 결과 출력: 1-NN 정확도: 29.0%</span></pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="var">train_serials</span>[:<span class="num">5000</span>]</div>
+      <div class="ldesc">학습 데이터 <b>5천 장</b>. 5만을 쓰면 너무 오래 걸려서 줄임.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">test_serials</span>[:<span class="num">500</span>]</div>
+      <div class="ldesc">테스트 데이터 <b>500장</b>. 즉 5000 × 500 = 250만 번의 거리 계산.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">array</span>(<span class="var">predictions</span>) == <span class="var">test_labels</span>[:<span class="num">500</span>]</div>
+      <div class="ldesc">예측 결과와 정답을 <b>한꺼번에 자리별로 비교</b>. 결과는 True/False 배열.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">mean</span>(...)</div>
+      <div class="ldesc">True는 1, False는 0으로 취급해 평균. <b>정답률 = 맞힌 개수 / 전체</b>가 됨.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="fn">f</span><span class="str">"... {accuracy:.1%}"</span></div>
+      <div class="ldesc"><b>f-string</b>(포맷 문자열). 중괄호 안의 변수를 바로 끼워 출력. <code class="inl">:.1%</code>는 "소수점 1자리 퍼센트로 표시" — 0.29 → 29.0%.</div>
+    </div>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">정확도 29% — 좋은 건가?</div>
+    10개 클래스 중 무작위로 찍으면 <b>10%</b>. 29%는 <b>찍기의 약 3배</b>로, 픽셀만 봐도 이 정도는 맞힐 수 있다는 뜻이에요.
+    하지만 우리가 보통 "잘한다"고 부르는 90%대와는 거리가 멀어요. <b>CNN</b> 같은 딥러닝은 같은 데이터에서 95% 이상도 가능합니다.
+  </div>
+</section>
+
+<!-- 10 wrong viz -->
+<section class="card" id="s10">
+  <span class="kicker amber">코드 ⑧</span>
+  <h2 class="title"><span class="num-badge">10</span>틀린 케이스 시각화</h2>
+  <p>"왜 틀렸을까?"를 눈으로 보면, 픽셀 거리의 한계가 직관적으로 보여요.</p>
+
+  <pre class="code"><span class="var">predictions</span> = <span class="var">np</span>.<span class="fn">array</span>(<span class="var">predictions</span>)
+<span class="var">ground_truth</span> = <span class="var">test_labels</span>[:<span class="num">500</span>]
+
+<span class="var">wrong_indices</span> = <span class="var">np</span>.<span class="fn">where</span>(<span class="var">predictions</span> != <span class="var">ground_truth</span>)[<span class="num">0</span>]
+
+<span class="var">plt</span>.<span class="fn">figure</span>(<span class="var">figsize</span>=(<span class="num">15</span>, <span class="num">2</span>))
+<span class="kw">for</span> <span class="var">i</span>, <span class="var">idx</span> <span class="kw">in</span> <span class="builtin">enumerate</span>(<span class="var">wrong_indices</span>[:<span class="num">10</span>]):
+    <span class="var">plt</span>.<span class="fn">subplot</span>(<span class="num">1</span>, <span class="num">10</span>, <span class="var">i</span> + <span class="num">1</span>)
+    <span class="var">plt</span>.<span class="fn">imshow</span>(<span class="fn">serial2image</span>(<span class="var">test_serials</span>[<span class="var">idx</span>]))
+    <span class="var">true_label</span> = <span class="var">class_names</span>[<span class="var">ground_truth</span>[<span class="var">idx</span>]]
+    <span class="var">pred_label</span> = <span class="var">class_names</span>[<span class="var">predictions</span>[<span class="var">idx</span>]]
+    <span class="var">plt</span>.<span class="fn">title</span>(<span class="fn">f</span><span class="str">"{true_label}\n→{pred_label}"</span>, <span class="var">fontsize</span>=<span class="num">7</span>, <span class="var">color</span>=<span class="str">'red'</span>)
+    <span class="var">plt</span>.<span class="fn">axis</span>(<span class="str">'off'</span>)
+<span class="var">plt</span>.<span class="fn">suptitle</span>(<span class="str">'Wrong Predictions (True → Predicted)'</span>, <span class="var">y</span>=<span class="num">1.1</span>)
+<span class="var">plt</span>.<span class="fn">show</span>()</pre>
+
+  <div class="lineby">
+    <div class="row">
+      <div class="lcode"><span class="var">predictions</span> != <span class="var">ground_truth</span></div>
+      <div class="ldesc">자리마다 <b>"다른가?"</b>를 비교 → True/False 배열. (==의 반대)</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">np</span>.<span class="fn">where</span>(...)[<span class="num">0</span>]</div>
+      <div class="ldesc">True인 자리(=틀린 자리)의 <b>번호들</b>만 모은 배열을 꺼냄.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="builtin">enumerate</span>(<span class="var">wrong_indices</span>[:<span class="num">10</span>])</div>
+      <div class="ldesc">앞 10개 틀린 인덱스에 대해 <b>(순서번호 i, 실제값 idx)</b>를 함께 돌려주는 반복문 도우미.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">class_names</span>[<span class="var">ground_truth</span>[<span class="var">idx</span>]]</div>
+      <div class="ldesc">숫자 라벨을 사람이 읽을 이름(예: 3 → 'cat')으로 변환.</div>
+    </div>
+    <div class="row">
+      <div class="lcode"><span class="var">plt</span>.<span class="fn">suptitle</span>(...)</div>
+      <div class="ldesc">전체 그림의 <b>큰 제목</b>을 단다. (subplot 위에 한 줄)</div>
+    </div>
+  </div>
+
+  <div class="analogy">
+    <div class="lbl">🤔 왜 자주 틀릴까?</div>
+    1-NN은 <b>픽셀 색만</b> 보지 모양·의미는 모릅니다. 그래서 <b>파란 배경의 하얀 새</b>가 <b>파란 바다의 하얀 배</b>와 가깝게 계산돼버려요.
+    "배경이 비슷하면 같은 종류"라고 착각하는 게 픽셀 기반 분류의 본질적 한계예요.
+  </div>
+</section>
+
+<!-- 11 discussion -->
+<section class="card" id="s11">
+  <span class="kicker purple">코드 ⑨</span>
+  <h2 class="title"><span class="num-badge">11</span>생각해보기 + 도전 과제</h2>
+
+  <h3>💬 생각해볼 질문 3개</h3>
+  <details class="ex">
+    <summary><span class="arr">▶</span> 1. pixel 거리로 이미지를 비교하는 방식의 한계는?</summary>
+    <div class="body">
+      <ul>
+        <li><b>배경에 끌려간다</b> — 새가 하늘 배경, 배가 바다 배경이면 비슷하다고 봄.</li>
+        <li><b>위치·크기에 약함</b> — 같은 고양이라도 살짝 옆으로 옮겨지면 거리 계산이 완전히 달라짐.</li>
+        <li><b>밝기·색조 변화에 흔들림</b> — 사진 한 장을 전체적으로 어둡게 하면 다른 이미지로 봄.</li>
+        <li><b>"의미"를 모름</b> — 픽셀의 RGB 값만 비교할 뿐, "이게 동물의 다리인지 도로의 그림자인지"는 알 수 없음.</li>
+      </ul>
+      <p class="tip">CNN(합성곱 신경망)은 이런 한계를 깨려고 <b>패턴·모양·계층적 특징</b>을 학습합니다.</p>
+    </div>
+  </details>
+
+  <details class="ex">
+    <summary><span class="arr">▶</span> 2. <code class="inl">.astype(float)</code>은 왜 필요한가요?</summary>
+    <div class="body">
+      <p>원본 픽셀은 <b>uint8</b>입니다. 0~255 사이 양의 정수만 표현 가능해요.</p>
+      <pre class="code"><span class="var">a</span> = <span class="var">np</span>.<span class="fn">uint8</span>(<span class="num">5</span>)
+<span class="var">b</span> = <span class="var">np</span>.<span class="fn">uint8</span>(<span class="num">10</span>)
+<span class="builtin">print</span>(<span class="var">a</span> - <span class="var">b</span>)   <span class="com"># 기대: -5  /  실제: 251 (오버플로!)</span></pre>
+      <p>이러면 거리 계산이 완전히 망가집니다. <code class="inl">.astype(float)</code>로 <b>실수</b>로 바꾸면 음수도 자연스럽게 다룰 수 있어 정상 작동해요.</p>
+    </div>
+  </details>
+
+  <details class="ex">
+    <summary><span class="arr">▶</span> 3. 학습 데이터를 5,000 → 50,000으로 늘리면?</summary>
+    <div class="body">
+      <ul>
+        <li><b>정확도</b> — 약간 오르지만 극적이진 않음. 1-NN의 본질적 한계(픽셀 거리) 때문에 한계가 분명.</li>
+        <li><b>속도</b> — <b>10배 느려짐</b>. 1-NN은 <b>예측할 때마다</b> 모든 학습 이미지와 거리 계산을 해야 함. 학습은 거의 무료지만 예측이 비쌈.</li>
+      </ul>
+      <p class="tip">이런 특성을 <b>"lazy learning(게으른 학습)"</b>이라고 불러요 — 학습은 빠르고, 예측은 무거움.</p>
+    </div>
+  </details>
+
+  <h3>⭐ 도전 과제</h3>
+
+  <div class="two">
+    <div class="mini blue">
+      <h4>L2 거리로 바꿔보기</h4>
+      <code class="inl">np.abs(...).sum(axis=1)</code> 대신 <b>제곱 합의 제곱근</b>(피타고라스 거리)을 써보고 정확도 변화를 비교.
+<pre class="code" style="font-size:12.5px;"><span class="var">distances</span> = <span class="var">np</span>.<span class="fn">sqrt</span>(
+    ((<span class="self">self</span>.<span class="var">images</span> - <span class="var">image</span>)**<span class="num">2</span>).<span class="fn">sum</span>(<span class="var">axis</span>=<span class="num">1</span>)
+)</pre>
+      <span class="tip">사실 가장 가까운 1장을 찾는 게 목적이라 <code class="inl">sqrt</code>는 생략해도 결과 같음(단조함수).</span>
+    </div>
+    <div class="mini purple">
+      <h4>K-NN으로 확장</h4>
+      가장 가까운 1장이 아니라 <b>K개</b>를 보고 <b>다수결</b>로 결정.
+<pre class="code" style="font-size:12.5px;"><span class="var">k</span> = <span class="num">5</span>
+<span class="var">top_k</span> = <span class="var">np</span>.<span class="fn">argsort</span>(<span class="var">distances</span>)[:<span class="var">k</span>]
+<span class="var">top_labels</span> = <span class="self">self</span>.<span class="var">labels</span>[<span class="var">top_k</span>]
+<span class="kw">return</span> <span class="var">np</span>.<span class="fn">bincount</span>(<span class="var">top_labels</span>).<span class="fn">argmax</span>()</pre>
+      <span class="tip">K가 너무 작으면 잡음에 약하고, 너무 크면 모든 클래스가 섞여 둔감해져요.</span>
+    </div>
+  </div>
+</section>
+
+<!-- 12 요약 -->
+<section class="card" id="s12">
+  <span class="kicker green">마무리</span>
+  <h2 class="title"><span class="num-badge">12</span>한 장 요약</h2>
+
+  <table>
+    <tr><th class="l">단계</th><th class="l">무엇을 하나</th><th class="l">핵심 코드</th></tr>
+    <tr><td class="l">⓪ 라이브러리</td><td class="l">필요한 도구 가져오기</td><td class="l"><code class="inl">import numpy as np</code> 등</td></tr>
+    <tr><td class="l">① 데이터 로드</td><td class="l">CIFAR-10을 (N, 3072) 표로</td><td class="l"><code class="inl">np.concatenate(...)</code> + <code class="inl">reshape</code></td></tr>
+    <tr><td class="l">② 시각화 함수</td><td class="l">1D 배열 → 32×32×3 사진</td><td class="l"><code class="inl">np.stack([R,G,B], axis=2)</code></td></tr>
+    <tr><td class="l">③ 클래스 갤러리</td><td class="l">10종 한 장씩 그려보기</td><td class="l"><code class="inl">np.where</code> + <code class="inl">plt.subplot</code></td></tr>
+    <tr><td class="l">④ 인터페이스</td><td class="l">train/predict 모양 정의</td><td class="l">두 줄짜리 함수</td></tr>
+    <tr class="hl"><td class="l">⑤ Model</td><td class="l">거리 계산 + argmin</td><td class="l"><code class="inl">np.abs(self.images - image).sum(axis=1)</code></td></tr>
+    <tr><td class="l">⑥ Sanity check</td><td class="l">자기 자신 예측으로 검증</td><td class="l">학습 데이터 = 테스트 데이터</td></tr>
+    <tr><td class="l">⑦ 정확도</td><td class="l">예측 == 정답 평균</td><td class="l"><code class="inl">np.mean(pred == truth)</code></td></tr>
+    <tr><td class="l">⑧ 오답 분석</td><td class="l">틀린 케이스 눈으로 보기</td><td class="l"><code class="inl">np.where(pred != truth)</code></td></tr>
+  </table>
+
+  <h3>꼭 기억할 NumPy 패턴 4가지</h3>
+  <div class="glossary">
+    <dt>슬라이싱</dt>
+    <dd><code class="inl">a[:1024]</code>, <code class="inl">a[1024:2048]</code> — 일부만 잘라 보기</dd>
+    <dt>reshape</dt>
+    <dd><code class="inl">.reshape(-1, 1024)</code> — 같은 데이터, 모양만 바꾸기</dd>
+    <dt>브로드캐스팅</dt>
+    <dd><code class="inl">(N, 3072) − (3072,)</code> — 모양이 달라도 자동 정렬</dd>
+    <dt>축 연산</dt>
+    <dd><code class="inl">.sum(axis=1)</code>, <code class="inl">np.argmin</code> — 어떤 방향으로 묶을지 axis로 지정</dd>
+  </div>
+
+  <div class="keybox">
+    <div class="lbl">🌟 단 한 줄로</div>
+    <b>1-Nearest Neighbor = "학습 데이터를 다 기억해두고, 새 이미지가 오면 그중 픽셀이 가장 비슷한 한 장의 라벨을 답한다"</b>
+  </div>
+
+  <div class="analogy">
+    <div class="lbl">다음 단계 힌트</div>
+    같은 데이터에 <b>CNN(합성곱 신경망)</b>을 적용하면 정확도가 90%+까지 올라갑니다. 그땐 픽셀이 아니라 <b>"눈, 코, 바퀴, 날개" 같은 패턴</b>을 모델이 스스로 학습해요. 1-NN의 한계를 직접 체감했다면, 다음 강의가 훨씬 와닿을 거예요.
+  </div>
+
+  <p class="footer">Week 2 「CIFAR-10 Nearest Neighbor 실습」 코드를 한 줄씩 풀어 정리한 학습 페이지입니다.<br>각 절을 천천히 따라 읽고, 노트북에서 직접 한 셀씩 실행해보면 NumPy 감각이 빨리 붙어요 🙂</p>
+</section>
+
+</div>
+</body>
+</html>
